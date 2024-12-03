@@ -1,87 +1,115 @@
-﻿using System.IO;
+﻿using System.Globalization;
+using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
 using Microsoft.Win32;
 
-const int ERROR_FILE_NOT_FOUND = 2;
-const int ERROR_JSON_PARSE = 10;
-const int ERROR_JSON_NULL = 11;
-const int ERROR_JSON_EXTRACT = 12;
-const int ERROR_JSON_UNKNOWN = 19;
-const int ERROR_REG_LOOKUP = 20;
-
-string SearchDirectory = Directory.GetCurrentDirectory();
-
-string[] Args = Environment.GetCommandLineArgs();
-if (Args.Length >= 2)
+namespace UATerry
 {
-    SearchDirectory = Args[1];
-}
-
-string[] CurrentFileNames = Directory.GetFiles(SearchDirectory, "*.uproject", SearchOption.TopDirectoryOnly);
-
-if (CurrentFileNames.Length == 0)
-{
-    Console.Error.WriteLine("No .uproject file found in given directory.");
-    return ERROR_FILE_NOT_FOUND;
-}
-
-string ProjectFileName = CurrentFileNames[0];
-string ProjectFileContents = File.ReadAllText(ProjectFileName);
-
-string? EngineVersion = null;
-
-// Extract the expected engine version from the .uproject file
-try
-{
-    JsonNode? ProjectNode = JsonNode.Parse(ProjectFileContents);
-    if (ProjectNode == null)
+    public class UEWhere
     {
-        Console.Error.WriteLine(".uproject file was a JSON null.");
-        return ERROR_JSON_NULL;
+        public static Uri GetPathToEngineDirectoryFromUProject(Uri UProjectPath)
+        {
+            string ProjectFileContents = File.ReadAllText(UProjectPath.AbsolutePath);
+
+            string? EngineVersion = null;
+
+            // Extract the expected engine version from the .uproject file
+            try
+            {
+                JsonNode? ProjectNode = JsonNode.Parse(ProjectFileContents);
+                if (ProjectNode == null)
+                {
+                    throw new ArgumentException(".uproject file was a JSON null.");
+                }
+
+                JsonObject ProjectObject = ProjectNode.AsObject();
+                EngineVersion = (string?)ProjectObject["EngineAssociation"];
+                if (EngineVersion == null)
+                {
+                    throw new ArgumentException("Failed to extract engine version from .uproject file.");
+                }
+            }
+            catch (JsonException)
+            {
+                throw new JsonException("Failed to parse .uproject file.");
+            }
+            catch (InvalidCastException)
+            {
+                throw new JsonException("Failed to parse. EngineAssociation value in .uproject file was not a string.");
+            }
+
+            // Look up engine in registry
+            const string RegRoot = "HKEY_LOCAL_MACHINE";
+            const string BaseKeyPath = "SOFTWARE\\EpicGames\\Unreal Engine\\{0}";
+            string RegistryKeyPath = RegRoot + "\\" + string.Format(BaseKeyPath, EngineVersion);
+
+            const string EngineValueName = "InstalledDirectory";
+
+            string? EngineInstallPath = (string?)Registry.GetValue(RegistryKeyPath, EngineValueName, null);
+
+            if (EngineInstallPath == null)
+            {
+                throw new Exception($"Expected registry entry was not found at {RegistryKeyPath}.");
+            }
+
+            return new Uri(EngineInstallPath);
+        }
     }
 
-    JsonObject ProjectObject = ProjectNode.AsObject();
-    EngineVersion = (string?)ProjectObject["EngineAssociation"];
-    if (EngineVersion == null)
+    internal class Program
     {
-        Console.Error.WriteLine("Failed to extract engine version from .uproject file.");
-        return ERROR_JSON_EXTRACT;
+        static int Main(string[] Args)
+        {
+            const int ERROR_PATH_NOT_FOUND = 2;
+            const int ERROR_JSON_PARSE = 10;
+            const int ERROR_JSON_NULL = 11;
+            const int ERROR_JSON_EXTRACT = 12;
+            const int ERROR_JSON_UNKNOWN = 19;
+            const int ERROR_REG_LOOKUP = 20;
+
+            string UProjectPath = string.Empty;
+            string SearchDirectory = Directory.GetCurrentDirectory();
+
+            // use directory given
+            if (Args.Length >= 1)
+            {
+                // is it a file that ends in .uproject?
+                if (string.Compare(Path.GetExtension(Args[0]), ".uproject", StringComparison.InvariantCultureIgnoreCase) == 0)
+                {
+                    UProjectPath = Args[0];
+                }
+                else
+                {
+                    // if not, is it a directory?
+                    if (!Directory.Exists(Args[0]))
+                    {
+                        Console.Error.WriteLine("Given path is not a .uproject file or a directory.");
+                        return ERROR_PATH_NOT_FOUND;
+                    }
+
+                    SearchDirectory = Args[0];
+                }
+            }
+
+            if (UProjectPath == string.Empty)
+            {
+                string[] CurrentFileNames = Directory.GetFiles(SearchDirectory, "*.uproject", SearchOption.TopDirectoryOnly);
+
+                if (CurrentFileNames.Length == 0)
+                {
+                    Console.Error.WriteLine("No .uproject file found in given directory.");
+                    return ERROR_PATH_NOT_FOUND;
+                }
+
+                UProjectPath = CurrentFileNames[0];
+            }
+
+            Uri EngineUri = UEWhere.GetPathToEngineDirectoryFromUProject(new Uri(UProjectPath));
+            Console.WriteLine(EngineUri.AbsolutePath);
+
+            return 0;
+        }
     }
 }
-catch (JsonException)
-{
-    Console.Error.WriteLine("Failed to parse .uproject file.");
-    return ERROR_JSON_PARSE;
-}
-catch (InvalidCastException)
-{
-    Console.Error.WriteLine("Failed to parse. EngineAssociation value in .uproject file was not a string.");
-    return ERROR_JSON_PARSE;
-}
-catch (NullReferenceException)
-{
-    Console.Error.WriteLine("Unknown error while trying to extract engine version from .uproject file.");
-    return ERROR_JSON_UNKNOWN;
-}
-
-// Look up engine in registry
-const string RegRoot = "HKEY_LOCAL_MACHINE";
-const string BaseKeyPath = "SOFTWARE\\EpicGames\\Unreal Engine\\{0}";
-string RegistryKeyPath = RegRoot + "\\" + string.Format(BaseKeyPath, EngineVersion);
-
-const string EngineValueName = "InstalledDirectory";
-
-string? EngineInstallPath = (string?)Registry.GetValue(RegistryKeyPath, EngineValueName, null);
-
-if (EngineInstallPath == null)
-{
-    Console.Error.WriteLine($"Expected registry entry was not found at {RegistryKeyPath}.");
-    return ERROR_REG_LOOKUP;
-}
-
-// Write path to engine to stdout
-Console.WriteLine(EngineInstallPath);
-
-return 0;

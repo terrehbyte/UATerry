@@ -9,6 +9,40 @@ namespace UATerry
 {
     public class UEWhere
     {
+        public static Uri GetPathToUProjectFromDirectory(Uri SearchDirectory)
+        {
+            if (!Directory.Exists(SearchDirectory.AbsolutePath))
+            {
+                throw new ArgumentException("Given path is not a directory.");
+            }
+
+            string[] CurrentFileNames = Directory.GetFiles(SearchDirectory.AbsolutePath, "*.uproject", SearchOption.TopDirectoryOnly);
+
+            if (CurrentFileNames.Length == 0)
+            {
+                throw new Exception("No .uproject file found in given directory.");
+            }
+
+            return new Uri(CurrentFileNames[0]);
+        }
+
+        public static Uri GetPathToEngineDirectoryFromDirectory(Uri UProjectDirectory)
+        {
+            if(!Directory.Exists(UProjectDirectory.AbsolutePath))
+            {
+                throw new ArgumentException("Given path is not a directory.");
+            }
+
+            string[] CurrentFileNames = Directory.GetFiles(UProjectDirectory.AbsolutePath, "*.uproject", SearchOption.TopDirectoryOnly);
+
+            if (CurrentFileNames.Length == 0)
+            {
+                throw new Exception("No .uproject file found in given directory.");
+            }
+
+            return GetPathToEngineDirectoryFromUProject(new Uri(CurrentFileNames[0]));
+        }
+
         public static Uri GetPathToEngineDirectoryFromUProject(Uri UProjectPath)
         {
             string ProjectFileContents = File.ReadAllText(UProjectPath.AbsolutePath);
@@ -95,15 +129,16 @@ namespace UATerry
 
             if (UProjectPath == string.Empty)
             {
-                string[] CurrentFileNames = Directory.GetFiles(SearchDirectory, "*.uproject", SearchOption.TopDirectoryOnly);
-
-                if (CurrentFileNames.Length == 0)
+                try
                 {
-                    Console.Error.WriteLine("No .uproject file found in given directory.");
+                    UProjectPath = UEWhere.GetPathToEngineDirectoryFromDirectory(new Uri(SearchDirectory)).AbsolutePath;
+                }
+                catch (Exception e)
+                {
+                    Console.Error.WriteLine("Failed to find .uproject file in given directory.");
+                    Console.Error.WriteLine("Error: " + e.Message);
                     return ERROR_PATH_NOT_FOUND;
                 }
-
-                UProjectPath = CurrentFileNames[0];
             }
 
             Uri EngineUri = UEWhere.GetPathToEngineDirectoryFromUProject(new Uri(UProjectPath));

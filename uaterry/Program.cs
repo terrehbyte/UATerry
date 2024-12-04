@@ -1,15 +1,18 @@
 ﻿using System.Diagnostics;
+using System.CommandLine;
 
 namespace UATerry
 {
     internal class Program
     {
-        static int Main(string[] Args)
+        static string? UProjectPath;
+        static string? EnginePath;
+        const string UATSubPath = "Engine\\Build\\BatchFiles\\RunUAT.bat";
+
+        static async Task<int> Main(string[] Args)
         {
             // get working directory
             string WorkingDirectory = Directory.GetCurrentDirectory();
-
-            const string UATSubPath = "Engine\\Build\\BatchFiles\\RunUAT.bat";
 
             if (Args.Length == 0)
             {
@@ -17,19 +20,46 @@ namespace UATerry
                 return 0;
             }
 
-            if (string.Compare(Args[0], "build", StringComparison.InvariantCultureIgnoreCase) != 0)
+            try
             {
-                Console.Error.WriteLine("Unknown command");
+                UProjectPath = UEWhere.GetPathToUProjectFromDirectory(WorkingDirectory);
+                EnginePath = UEWhere.GetPathToEngineDirectoryFromUProject(UProjectPath);
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine("Failed to find .uproject file in given directory.");
+                Console.Error.WriteLine("Error: " + e.Message);
                 return 1;
             }
 
-            Uri UProjectPath = UEWhere.GetPathToUProjectFromDirectory(new Uri(WorkingDirectory));
-            Uri EnginePath = UEWhere.GetPathToEngineDirectoryFromUProject(UProjectPath);
+            RootCommand RootCmd = new RootCommand("Sample root command");
+            RootCmd.SetHandler(() =>
+            {
+                Console.WriteLine("Hello from root command");
+                return Task.CompletedTask;
+            });
+
+            Command BuildCmd = new Command("build", "Build the project editor");
+            BuildCmd.SetHandler(() => BuildCommand(Args));
+
+            RootCmd.AddCommand(BuildCmd);
+
+            return await RootCmd.InvokeAsync(Args);
+        }
+
+        static async Task<int> BuildCommand(string[] Args)
+        {
+            Debug.Assert(EnginePath != null);
+            Debug.Assert(UProjectPath != null);
+
+            Uri TestPath = new Uri(EnginePath);
+            var v = TestPath.LocalPath;
 
             // launch build
             ProcessStartInfo StartInfo = new ProcessStartInfo();
-            StartInfo.FileName = Path.Combine(EnginePath.AbsolutePath, UATSubPath);
-            StartInfo.Arguments = $"BuildEditor -project=\"{UProjectPath.AbsolutePath}\" -notools";
+            StartInfo.FileName = Path.Join(EnginePath, UATSubPath);
+            StartInfo.Arguments = $"BuildEditor -project=\"{UProjectPath}\" -notools";
+            StartInfo.WorkingDirectory = EnginePath;
             StartInfo.UseShellExecute = false;
             StartInfo.RedirectStandardOutput = true;
             StartInfo.RedirectStandardError = true;

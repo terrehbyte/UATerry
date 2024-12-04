@@ -9,43 +9,45 @@ namespace UATerry
 {
     public class UEWhere
     {
-        public static Uri GetPathToUProjectFromDirectory(Uri SearchDirectory)
+        private const string UATSubPath = "Engine\\Build\\BatchFiles\\RunUAT.bat";
+
+        public static string GetPathToUProjectFromDirectory(string SearchDirectory)
         {
-            if (!Directory.Exists(SearchDirectory.AbsolutePath))
+            if (!Directory.Exists(SearchDirectory))
             {
                 throw new ArgumentException("Given path is not a directory.");
             }
 
-            string[] CurrentFileNames = Directory.GetFiles(SearchDirectory.AbsolutePath, "*.uproject", SearchOption.TopDirectoryOnly);
+            string[] CurrentFileNames = Directory.GetFiles(SearchDirectory, "*.uproject", SearchOption.TopDirectoryOnly);
 
             if (CurrentFileNames.Length == 0)
             {
                 throw new Exception("No .uproject file found in given directory.");
             }
 
-            return new Uri(CurrentFileNames[0]);
+            return new string(CurrentFileNames[0]);
         }
 
-        public static Uri GetPathToEngineDirectoryFromDirectory(Uri UProjectDirectory)
+        public static string GetPathToEngineDirectoryFromDirectory(string UProjectDirectory)
         {
-            if(!Directory.Exists(UProjectDirectory.AbsolutePath))
+            if(!Directory.Exists(UProjectDirectory))
             {
                 throw new ArgumentException("Given path is not a directory.");
             }
 
-            string[] CurrentFileNames = Directory.GetFiles(UProjectDirectory.AbsolutePath, "*.uproject", SearchOption.TopDirectoryOnly);
+            string[] CurrentFileNames = Directory.GetFiles(UProjectDirectory, "*.uproject", SearchOption.TopDirectoryOnly);
 
             if (CurrentFileNames.Length == 0)
             {
                 throw new Exception("No .uproject file found in given directory.");
             }
 
-            return GetPathToEngineDirectoryFromUProject(new Uri(CurrentFileNames[0]));
+            return GetPathToEngineDirectoryFromUProject(new string(CurrentFileNames[0]));
         }
 
-        public static Uri GetPathToEngineDirectoryFromUProject(Uri UProjectPath)
+        public static string GetPathToEngineDirectoryFromUProject(string UProjectPath)
         {
-            string ProjectFileContents = File.ReadAllText(UProjectPath.AbsolutePath);
+            string ProjectFileContents = File.ReadAllText(UProjectPath);
 
             string? EngineVersion = null;
 
@@ -75,9 +77,38 @@ namespace UATerry
             }
 
             // Look up engine in registry
+            string? EngineInstallPath = GetEnginePathFromRegistry(EngineVersion);
+
+            if (EngineInstallPath == null)
+            {
+                const string BaseProgramFilesPath = "C:\\Program Files\\Epic Games\\UE_{0}\\";
+                string ProgramFilesPath = string.Format(BaseProgramFilesPath, EngineVersion);
+                if (Directory.Exists(ProgramFilesPath))
+                {
+                    EngineInstallPath = new string(ProgramFilesPath);
+                }
+                else
+                {
+                    throw new Exception("Failed to find engine path in registry or default location.");
+                }
+            }
+
+            string EngineRunUATPath = Path.Join(EngineInstallPath, UATSubPath);
+            // Validate engine path
+            if (!File.Exists(EngineRunUATPath))
+            {
+                throw new Exception($"RunUAT.bat was not found at expected path in engine. ({EngineRunUATPath})");
+            }
+
+            return EngineInstallPath;
+        }
+
+        private static string? GetEnginePathFromRegistry(string EngineIdentifier)
+        {
+            // Look up engine in registry
             const string RegRoot = "HKEY_LOCAL_MACHINE";
             const string BaseKeyPath = "SOFTWARE\\EpicGames\\Unreal Engine\\{0}";
-            string RegistryKeyPath = RegRoot + "\\" + string.Format(BaseKeyPath, EngineVersion);
+            string RegistryKeyPath = RegRoot + "\\" + string.Format(BaseKeyPath, EngineIdentifier);
 
             const string EngineValueName = "InstalledDirectory";
 
@@ -85,10 +116,10 @@ namespace UATerry
 
             if (EngineInstallPath == null)
             {
-                throw new Exception($"Expected registry entry was not found at {RegistryKeyPath}.");
+                return null;
             }
 
-            return new Uri(EngineInstallPath);
+            return new string(EngineInstallPath);
         }
     }
 
@@ -131,7 +162,7 @@ namespace UATerry
             {
                 try
                 {
-                    UProjectPath = UEWhere.GetPathToEngineDirectoryFromDirectory(new Uri(SearchDirectory)).AbsolutePath;
+                    UProjectPath = UEWhere.GetPathToEngineDirectoryFromDirectory(new string(SearchDirectory));
                 }
                 catch (Exception e)
                 {
@@ -141,8 +172,8 @@ namespace UATerry
                 }
             }
 
-            Uri EngineUri = UEWhere.GetPathToEngineDirectoryFromUProject(new Uri(UProjectPath));
-            Console.WriteLine(EngineUri.AbsolutePath);
+            string EngineString = UEWhere.GetPathToEngineDirectoryFromUProject(new string(UProjectPath));
+            Console.WriteLine(EngineString);
 
             return 0;
         }

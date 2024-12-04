@@ -55,7 +55,7 @@ namespace UATerry
             // launch build
             ProcessStartInfo StartInfo = new ProcessStartInfo();
             StartInfo.FileName = Path.Join(EngineUri.LocalPath, UATSubPath);
-            StartInfo.Arguments = $"BuildEditor -project=\"{UProjectUri}\" -notools";
+            StartInfo.Arguments = $"BuildEditor -project=\"{UProjectUri.LocalPath}\" -notools";
             StartInfo.WorkingDirectory = EngineUri.LocalPath;
             StartInfo.UseShellExecute = false;
             StartInfo.RedirectStandardOutput = true;

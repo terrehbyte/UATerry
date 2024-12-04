@@ -11,43 +11,43 @@ namespace UATerry
     {
         private const string UATSubPath = "Engine\\Build\\BatchFiles\\RunUAT.bat";
 
-        public static string GetPathToUProjectFromDirectory(string SearchDirectory)
+        public static Uri GetPathToUProjectFromDirectory(Uri SearchDirectory)
         {
-            if (!Directory.Exists(SearchDirectory))
+            if (!Directory.Exists(SearchDirectory.LocalPath))
             {
                 throw new ArgumentException("Given path is not a directory.");
             }
 
-            string[] CurrentFileNames = Directory.GetFiles(SearchDirectory, "*.uproject", SearchOption.TopDirectoryOnly);
+            string[] CurrentFileNames = Directory.GetFiles(SearchDirectory.LocalPath, "*.uproject", SearchOption.TopDirectoryOnly);
 
             if (CurrentFileNames.Length == 0)
             {
                 throw new Exception("No .uproject file found in given directory.");
             }
 
-            return new string(CurrentFileNames[0]);
+            return new Uri(CurrentFileNames[0]);
         }
 
-        public static string GetPathToEngineDirectoryFromDirectory(string UProjectDirectory)
+        public static Uri GetPathToEngineDirectoryFromDirectory(Uri UProjectDirectory)
         {
-            if(!Directory.Exists(UProjectDirectory))
+            if(!Directory.Exists(UProjectDirectory.LocalPath))
             {
                 throw new ArgumentException("Given path is not a directory.");
             }
 
-            string[] CurrentFileNames = Directory.GetFiles(UProjectDirectory, "*.uproject", SearchOption.TopDirectoryOnly);
+            string[] CurrentFileNames = Directory.GetFiles(UProjectDirectory.LocalPath, "*.uproject", SearchOption.TopDirectoryOnly);
 
             if (CurrentFileNames.Length == 0)
             {
                 throw new Exception("No .uproject file found in given directory.");
             }
 
-            return GetPathToEngineDirectoryFromUProject(new string(CurrentFileNames[0]));
+            return GetPathToEngineDirectoryFromUProject(new Uri(CurrentFileNames[0]));
         }
 
-        public static string GetPathToEngineDirectoryFromUProject(string UProjectPath)
+        public static Uri GetPathToEngineDirectoryFromUProject(Uri UProjectPath)
         {
-            string ProjectFileContents = File.ReadAllText(UProjectPath);
+            string ProjectFileContents = File.ReadAllText(UProjectPath.LocalPath);
 
             string? EngineVersion = null;
 
@@ -77,7 +77,7 @@ namespace UATerry
             }
 
             // Look up engine in registry
-            string? EngineInstallPath = GetEnginePathFromRegistry(EngineVersion);
+            Uri? EngineInstallPath = GetEnginePathFromRegistry(EngineVersion);
 
             if (EngineInstallPath == null)
             {
@@ -85,7 +85,7 @@ namespace UATerry
                 string ProgramFilesPath = string.Format(BaseProgramFilesPath, EngineVersion);
                 if (Directory.Exists(ProgramFilesPath))
                 {
-                    EngineInstallPath = new string(ProgramFilesPath);
+                    EngineInstallPath = new Uri(ProgramFilesPath);
                 }
                 else
                 {
@@ -93,7 +93,7 @@ namespace UATerry
                 }
             }
 
-            string EngineRunUATPath = Path.Join(EngineInstallPath, UATSubPath);
+            string EngineRunUATPath = Path.Join(EngineInstallPath.LocalPath, UATSubPath);
             // Validate engine path
             if (!File.Exists(EngineRunUATPath))
             {
@@ -103,7 +103,7 @@ namespace UATerry
             return EngineInstallPath;
         }
 
-        private static string? GetEnginePathFromRegistry(string EngineIdentifier)
+        private static Uri? GetEnginePathFromRegistry(string EngineIdentifier)
         {
             // Look up engine in registry
             const string RegRoot = "HKEY_LOCAL_MACHINE";
@@ -119,7 +119,7 @@ namespace UATerry
                 return null;
             }
 
-            return new string(EngineInstallPath);
+            return new Uri(EngineInstallPath);
         }
     }
 
@@ -162,7 +162,7 @@ namespace UATerry
             {
                 try
                 {
-                    UProjectPath = UEWhere.GetPathToEngineDirectoryFromDirectory(new string(SearchDirectory));
+                    UProjectPath = UEWhere.GetPathToEngineDirectoryFromDirectory(new Uri(SearchDirectory)).LocalPath;
                 }
                 catch (Exception e)
                 {
@@ -172,7 +172,7 @@ namespace UATerry
                 }
             }
 
-            string EngineString = UEWhere.GetPathToEngineDirectoryFromUProject(new string(UProjectPath));
+            string EngineString = UEWhere.GetPathToEngineDirectoryFromUProject(new Uri(UProjectPath)).LocalPath;
             Console.WriteLine(EngineString);
 
             return 0;

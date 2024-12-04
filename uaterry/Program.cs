@@ -5,8 +5,8 @@ namespace UATerry
 {
     internal class Program
     {
-        static string? UProjectPath;
-        static string? EnginePath;
+        static Uri? UProjectUri;
+        static Uri? EngineUri;
         const string UATSubPath = "Engine\\Build\\BatchFiles\\RunUAT.bat";
 
         static async Task<int> Main(string[] Args)
@@ -22,8 +22,8 @@ namespace UATerry
 
             try
             {
-                UProjectPath = UEWhere.GetPathToUProjectFromDirectory(WorkingDirectory);
-                EnginePath = UEWhere.GetPathToEngineDirectoryFromUProject(UProjectPath);
+                UProjectUri = UEWhere.GetPathToUProjectFromDirectory(new Uri(WorkingDirectory));
+                EngineUri = UEWhere.GetPathToEngineDirectoryFromUProject(UProjectUri);
             }
             catch (Exception e)
             {
@@ -49,17 +49,14 @@ namespace UATerry
 
         static async Task<int> BuildCommand(string[] Args)
         {
-            Debug.Assert(EnginePath != null);
-            Debug.Assert(UProjectPath != null);
-
-            Uri TestPath = new Uri(EnginePath);
-            var v = TestPath.LocalPath;
+            Debug.Assert(EngineUri != null);
+            Debug.Assert(UProjectUri != null);
 
             // launch build
             ProcessStartInfo StartInfo = new ProcessStartInfo();
-            StartInfo.FileName = Path.Join(EnginePath, UATSubPath);
-            StartInfo.Arguments = $"BuildEditor -project=\"{UProjectPath}\" -notools";
-            StartInfo.WorkingDirectory = EnginePath;
+            StartInfo.FileName = Path.Join(EngineUri.LocalPath, UATSubPath);
+            StartInfo.Arguments = $"BuildEditor -project=\"{UProjectUri}\" -notools";
+            StartInfo.WorkingDirectory = EngineUri.LocalPath;
             StartInfo.UseShellExecute = false;
             StartInfo.RedirectStandardOutput = true;
             StartInfo.RedirectStandardError = true;

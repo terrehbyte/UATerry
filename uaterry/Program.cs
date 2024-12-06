@@ -6,7 +6,10 @@ namespace UATerry
     internal class Program
     {
         static Uri? UProjectUri;
+        static Uri? UProjectDirUri;
         static Uri? EngineUri;
+
+        static string MainModuleName = string.Empty;
         const string UATSubPath = "Engine\\Build\\BatchFiles\\RunUAT.bat";
 
         static async Task<int> Main(string[] Args)
@@ -23,7 +26,9 @@ namespace UATerry
             try
             {
                 UProjectUri = UEWhere.GetPathToUProjectFromDirectory(new Uri(WorkingDirectory));
+                UProjectDirUri = new Uri(Path.GetDirectoryName(UProjectUri.LocalPath)!);
                 EngineUri = UEWhere.GetPathToEngineDirectoryFromUProject(UProjectUri);
+                MainModuleName = UEWhere.ModuleName;
             }
             catch (Exception e)
             {
@@ -70,7 +75,25 @@ namespace UATerry
             BuildProcess.BeginErrorReadLine();
             BuildProcess.WaitForExit();
 
+            P4CLI P4Client = new P4CLI();
+
+            // checkout if logged in
+            if (P4Client.LoginStatus)
+            {
+                Debug.Assert(UProjectDirUri != null);
+                P4Client.TryAddEdit(Path.Join(UProjectDirUri.LocalPath, "Binaries/Win64/UnrealEditor-*.dll") , "", "-I");
+                P4Client.TryAddEdit(Path.Join(UProjectDirUri.LocalPath, "Binaries/Win64/UnrealEditor.modules"), "", "-I");
+                P4Client.TryAddEdit(Path.Join(UProjectDirUri.LocalPath, $"Binaries/Win64/{MainModuleName}Editor.target"), "", "-I");
+            }
+
             return 0;
         }
+
+        // static async Task<int> SetupCommand()
+        // {
+        //     // check for expected executables on path
+
+        //     // set p4 ignore if not defined
+        // }
     }
 }

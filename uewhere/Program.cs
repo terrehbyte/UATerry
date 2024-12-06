@@ -11,6 +11,8 @@ namespace UATerry
     {
         private const string UATSubPath = "Engine\\Build\\BatchFiles\\RunUAT.bat";
 
+        public static string ModuleName { get; private set; } = string.Empty;
+
         public static Uri GetPathToUProjectFromDirectory(Uri SearchDirectory)
         {
             if (!Directory.Exists(SearchDirectory.LocalPath))
@@ -62,6 +64,7 @@ namespace UATerry
 
                 JsonObject ProjectObject = ProjectNode.AsObject();
                 EngineVersion = (string?)ProjectObject["EngineAssociation"];
+                ModuleName = (string)ProjectObject["Modules"][0]["Name"];
                 if (EngineVersion == null)
                 {
                     throw new ArgumentException("Failed to extract engine version from .uproject file.");

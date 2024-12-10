@@ -12,6 +12,33 @@ namespace UATerry
         static string MainModuleName = string.Empty;
         const string UATSubPath = "Engine\\Build\\BatchFiles\\RunUAT.bat";
 
+        static Perforce.P4.Repository GetP4Repository()
+        {
+            // get environment variables
+            string? P4Port = Environment.GetEnvironmentVariable("P4PORT");
+            // string? P4User = Environment.GetEnvironmentVariable("P4USER");
+            // string? P4Client = Environment.GetEnvironmentVariable("P4CLIENT");
+
+            Perforce.P4.Options Options = new Perforce.P4.Options();
+            Options["ProgramName"] = "UATerry";
+            Options["cwd"] = Directory.GetCurrentDirectory();
+
+            Perforce.P4.Server Server = new(new Perforce.P4.ServerAddress(P4Port));
+            Perforce.P4.Repository Repo = new(Server);
+
+            try
+            {
+                Repo.Connection.Connect(Options);
+            }
+            catch (Perforce.P4.P4Exception e)
+            {
+                Console.Error.WriteLine("Failed to connect to Perforce server.");
+                Console.Error.WriteLine("Error: " + e.Message);
+            }
+
+            return Repo;
+        }
+
         static async Task<int> Main(string[] Args)
         {
             // get working directory
@@ -75,15 +102,26 @@ namespace UATerry
             BuildProcess.BeginErrorReadLine();
             BuildProcess.WaitForExit();
 
-            P4CLI P4Client = new P4CLI();
+            Perforce.P4.Repository PerforceRepo = GetP4Repository();
 
             // checkout if logged in
-            if (P4Client.LoginStatus)
+            if (PerforceRepo.Connection.Status == Perforce.P4.ConnectionStatus.Connected)
             {
                 Debug.Assert(UProjectDirUri != null);
-                P4Client.TryAddEdit(Path.Join(UProjectDirUri.LocalPath, "Binaries/Win64/UnrealEditor-*.dll") , "", "-I");
-                P4Client.TryAddEdit(Path.Join(UProjectDirUri.LocalPath, "Binaries/Win64/UnrealEditor.modules"), "", "-I");
-                P4Client.TryAddEdit(Path.Join(UProjectDirUri.LocalPath, $"Binaries/Win64/{MainModuleName}Editor.target"), "", "-I");
+
+                try
+                {
+                    PerforceRepo.TryAddEdit(Path.Join(UProjectDirUri.LocalPath, $"Binaries/Win64/UnrealEditor-{MainModuleName}.dll"), Perforce.P4.AddFilesCmdFlags.NoP4Ignore);
+                    PerforceRepo.TryAddEdit(Path.Join(UProjectDirUri.LocalPath, "Binaries/Win64/UnrealEditor.modules"), Perforce.P4.AddFilesCmdFlags.NoP4Ignore);
+                    PerforceRepo.TryAddEdit(Path.Join(UProjectDirUri.LocalPath, $"Binaries/Win64/{MainModuleName}Editor.target"), Perforce.P4.AddFilesCmdFlags.NoP4Ignore);
+                    // TODO: We can evaluate the .target file to find all build products
+                }
+                catch (Perforce.P4.P4Exception e)
+                {
+                    Console.Error.WriteLine("Failed to add or edit files in Perforce.");
+                    Console.Error.WriteLine("Error: " + e.Message);
+                    return 2;
+                }
             }
 
             return 0;

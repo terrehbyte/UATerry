@@ -12,6 +12,8 @@ namespace UATerry
         static string MainModuleName = string.Empty;
         const string UATSubPath = "Engine\\Build\\BatchFiles\\RunUAT.bat";
 
+        static bool UsePerforce = false;
+
         static Perforce.P4.Repository GetP4Repository()
         {
             // get environment variables
@@ -30,7 +32,7 @@ namespace UATerry
             {
                 Repo.Connection.Connect(Options);
             }
-            catch (Perforce.P4.P4Exception e)
+            catch (Exception e)
             {
                 Console.Error.WriteLine("Failed to connect to Perforce server.");
                 Console.Error.WriteLine("Error: " + e.Message);
@@ -64,7 +66,10 @@ namespace UATerry
                 return 1;
             }
 
+            var PerforceOption = new Option<bool>("--perforce", "Use Perforce to check out files after automation completes.");
+
             RootCommand RootCmd = new RootCommand("Sample root command");
+            RootCmd.AddGlobalOption(PerforceOption);
             RootCmd.SetHandler(() =>
             {
                 Console.WriteLine("Hello from root command");
@@ -72,7 +77,10 @@ namespace UATerry
             });
 
             Command BuildCmd = new Command("build", "Build the project editor");
-            BuildCmd.SetHandler(() => BuildCommand(Args));
+            BuildCmd.SetHandler(async (bool UsePerforceValue) => {
+                UsePerforce = UsePerforceValue;
+                await BuildCommand(Args);
+            }, PerforceOption);
 
             RootCmd.AddCommand(BuildCmd);
 
@@ -102,25 +110,28 @@ namespace UATerry
             BuildProcess.BeginErrorReadLine();
             BuildProcess.WaitForExit();
 
-            Perforce.P4.Repository PerforceRepo = GetP4Repository();
-
-            // checkout if logged in
-            if (PerforceRepo.Connection.Status == Perforce.P4.ConnectionStatus.Connected)
+            if (UsePerforce)
             {
-                Debug.Assert(UProjectDirUri != null);
+                Perforce.P4.Repository PerforceRepo = GetP4Repository();
 
-                try
+                // checkout if logged in
+                if (PerforceRepo.Connection.Status == Perforce.P4.ConnectionStatus.Connected)
                 {
-                    PerforceRepo.TryAddEdit(Path.Join(UProjectDirUri.LocalPath, $"Binaries/Win64/UnrealEditor-{MainModuleName}.dll"), Perforce.P4.AddFilesCmdFlags.NoP4Ignore);
-                    PerforceRepo.TryAddEdit(Path.Join(UProjectDirUri.LocalPath, "Binaries/Win64/UnrealEditor.modules"), Perforce.P4.AddFilesCmdFlags.NoP4Ignore);
-                    PerforceRepo.TryAddEdit(Path.Join(UProjectDirUri.LocalPath, $"Binaries/Win64/{MainModuleName}Editor.target"), Perforce.P4.AddFilesCmdFlags.NoP4Ignore);
-                    // TODO: We can evaluate the .target file to find all build products
-                }
-                catch (Perforce.P4.P4Exception e)
-                {
-                    Console.Error.WriteLine("Failed to add or edit files in Perforce.");
-                    Console.Error.WriteLine("Error: " + e.Message);
-                    return 2;
+                    Debug.Assert(UProjectDirUri != null);
+
+                    try
+                    {
+                        PerforceRepo.TryAddEdit(Path.Join(UProjectDirUri.LocalPath, $"Binaries/Win64/UnrealEditor-{MainModuleName}.dll"), Perforce.P4.AddFilesCmdFlags.NoP4Ignore);
+                        PerforceRepo.TryAddEdit(Path.Join(UProjectDirUri.LocalPath, "Binaries/Win64/UnrealEditor.modules"), Perforce.P4.AddFilesCmdFlags.NoP4Ignore);
+                        PerforceRepo.TryAddEdit(Path.Join(UProjectDirUri.LocalPath, $"Binaries/Win64/{MainModuleName}Editor.target"), Perforce.P4.AddFilesCmdFlags.NoP4Ignore);
+                        // TODO: We can evaluate the .target file to find all build products
+                    }
+                    catch (Perforce.P4.P4Exception e)
+                    {
+                        Console.Error.WriteLine("Failed to add or edit files in Perforce.");
+                        Console.Error.WriteLine("Error: " + e.Message);
+                        return 2;
+                    }
                 }
             }
 

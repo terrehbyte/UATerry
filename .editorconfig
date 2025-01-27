@@ -13,9 +13,19 @@ root = true
 indent_style = tab
 indent_size = 4
 charset = utf-8
-end_of_line = crlf
+end_of_line = lf
 insert_final_newline = true
-guidelines = 80, 120
+
+# Visual Studio files prefer Windows conventions
+[*.{sln, vcxproj, csproj}]
+# VS project files expect UTF-16 with BOM; unset to defer to IDE
+charset = unset
+end_of_line = crlf
+
+[*.bat]
+end_of_line = crlf
+[*.sh]
+end_of_line = lf
 
 [*.{c++,cc,cpp,cppm,cxx,h,h++,hh,hpp,hxx,inl,ipp,ixx,tlh,tli}]
 # Visual C++ Code Style settings
@@ -37,9 +47,9 @@ cpp_indent_namespace_contents = true
 cpp_indent_preserve_comments = false
 
 cpp_new_line_before_open_brace_namespace = ignore
-cpp_new_line_before_open_brace_type = new_line
-cpp_new_line_before_open_brace_function = new_line
-cpp_new_line_before_open_brace_block = new_line
+cpp_new_line_before_open_brace_type = ignore
+cpp_new_line_before_open_brace_function = ignore
+cpp_new_line_before_open_brace_block = ignore
 cpp_new_line_before_open_brace_lambda = ignore
 cpp_new_line_scope_braces_on_separate_lines = false
 cpp_new_line_close_brace_same_line_empty_type = false
@@ -96,9 +106,3 @@ cpp_sort_includes_priority_case_sensitive = false
 cpp_sort_includes_priority_style = quoted
 cpp_includes_style = default
 cpp_includes_use_forward_slash = true
-
-[*.bat]
-end_of_line = crlf
-
-[*.sh]
-end_of_line = lf

@@ -1,8 +1,19 @@
 # Auto detect text files and perform LF normalization
-*          text=auto
+*          	text=auto
 
-*.cs       text diff=csharp
-*.cshtml   text diff=html
-*.csx      text diff=csharp
-*.sln      text eol=crlf
-*.csproj   text eol=crlf
+*.cs        text diff=csharp
+
+*.c         text diff=cpp
+*.cc        text diff=cpp
+*.cxx       text diff=cpp
+*.cpp       text diff=cpp
+*.cpi       text diff=cpp
+*.c++       text diff=cpp
+*.hpp       text diff=cpp
+*.h         text diff=cpp
+*.h++       text diff=cpp
+*.hh        text diff=cpp
+
+*.sln       text eol=crlf
+*.csproj    text eol=crlf
+*.vcxproj   text eol=crlf

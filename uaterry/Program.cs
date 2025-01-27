@@ -78,13 +78,13 @@ namespace UATerry
 				return 1;
 			}
 
-			var PerforceOption = new Option<bool>("--perforce", "Use Perforce to check out files after automation completes.");
+			var PerforceOption = new Option<bool>("--perforce", "Use Perforce to checkout files before building");
 
-			RootCommand RootCmd = new RootCommand("Sample root command");
+			RootCommand RootCmd = new RootCommand("UATerry locates and runs the Unreal Engine Automation Tool (UAT) with preconfigured parameters for common tasks.");
 			RootCmd.AddGlobalOption(PerforceOption);
 			RootCmd.SetHandler(() =>
 			{
-				Console.WriteLine("Hello from root command");
+				Console.WriteLine("Nothing to do. Please specify a command.");
 				return Task.CompletedTask;
 			});
 
@@ -105,6 +105,45 @@ namespace UATerry
 			Debug.Assert(EngineUri != null);
 			Debug.Assert(UProjectUri != null);
 
+			if (UsePerforce)
+			{
+				Perforce.P4.Repository PerforceRepo = GetP4Repository();
+
+				// checkout if logged in
+				if (PerforceRepo.Connection.Status == Perforce.P4.ConnectionStatus.Connected)
+				{
+					Debug.Assert(UProjectDirUri != null);
+
+					string[] RelativePathsToAdd = {
+						$"Binaries/Win64/UnrealEditor-{MainModuleName}.dll",
+						"Binaries/Win64/UnrealEditor.modules",
+						$"Binaries/Win64/{MainModuleName}Editor.target"
+					};
+					// TODO: We can evaluate the .target file to find all build products for multi-module projects
+
+					bool AddSuccess = true;
+					foreach (var RelPath in RelativePathsToAdd)
+					{
+						try
+						{
+							PerforceRepo.TryAddEdit(Path.Join(UProjectDirUri.LocalPath, RelPath), Perforce.P4.AddFilesCmdFlags.NoP4Ignore);
+							Console.WriteLine($"Marked '{RelPath}' for add/edit in Perforce.");
+						}
+						catch (Perforce.P4.P4Exception e)
+						{
+							Console.Error.WriteLine($"Failed to mark '{RelPath}' for add/edit in Perforce.");
+							Console.Error.WriteLine("Error: " + e.Message);
+							AddSuccess = false;
+						}
+					}
+
+					if (!AddSuccess)
+					{
+						return 2;
+					}
+				}
+			}
+
 			// launch build
 			ProcessStartInfo StartInfo = new ProcessStartInfo();
 			StartInfo.FileName = Path.Join(EngineUri.LocalPath, UATSubPath);
@@ -122,31 +161,6 @@ namespace UATerry
 			BuildProcess.BeginOutputReadLine();
 			BuildProcess.BeginErrorReadLine();
 			BuildProcess.WaitForExit();
-
-			if (UsePerforce)
-			{
-				Perforce.P4.Repository PerforceRepo = GetP4Repository();
-
-				// checkout if logged in
-				if (PerforceRepo.Connection.Status == Perforce.P4.ConnectionStatus.Connected)
-				{
-					Debug.Assert(UProjectDirUri != null);
-
-					try
-					{
-						PerforceRepo.TryAddEdit(Path.Join(UProjectDirUri.LocalPath, $"Binaries/Win64/UnrealEditor-{MainModuleName}.dll"), Perforce.P4.AddFilesCmdFlags.NoP4Ignore);
-						PerforceRepo.TryAddEdit(Path.Join(UProjectDirUri.LocalPath, "Binaries/Win64/UnrealEditor.modules"), Perforce.P4.AddFilesCmdFlags.NoP4Ignore);
-						PerforceRepo.TryAddEdit(Path.Join(UProjectDirUri.LocalPath, $"Binaries/Win64/{MainModuleName}Editor.target"), Perforce.P4.AddFilesCmdFlags.NoP4Ignore);
-						// TODO: We can evaluate the .target file to find all build products
-					}
-					catch (Perforce.P4.P4Exception e)
-					{
-						Console.Error.WriteLine("Failed to add or edit files in Perforce.");
-						Console.Error.WriteLine("Error: " + e.Message);
-						return 2;
-					}
-				}
-			}
 
 			return 0;
 		}

@@ -14,16 +14,27 @@ namespace UATerry
 
 		static bool UsePerforce = false;
 
+		// 1. Unreal Engine Perforce Configuration (including UseP4Config)
+		// 2. P4CONFIG
+		// 3. Environment Variables
 		static Perforce.P4.Repository GetP4Repository()
 		{
 			// get environment variables
-			string? P4Port = Environment.GetEnvironmentVariable("P4PORT");
-			// string? P4User = Environment.GetEnvironmentVariable("P4USER");
-			// string? P4Client = Environment.GetEnvironmentVariable("P4CLIENT");
+			string P4Port = Environment.GetEnvironmentVariable("P4PORT") ?? string.Empty;
+			string P4User = Environment.GetEnvironmentVariable("P4USER") ?? string.Empty;
+			string P4Client = Environment.GetEnvironmentVariable("P4CLIENT") ?? string.Empty;
+
+			// get ue settings
+			Uri UProjectFileDirectory = new Uri(Path.GetDirectoryName(UProjectUri.LocalPath) + Path.DirectorySeparatorChar);
+			Uri RelativeSourceControlSettingsUri = new Uri("Saved\\Config\\WindowsEditor\\SourceControlSettings.ini", UriKind.Relative);
+			P4SourceControlSettings Settings = P4SourceControlSettings.GetFromIni(new Uri(UProjectFileDirectory, RelativeSourceControlSettingsUri));
 
 			Perforce.P4.Options Options = new Perforce.P4.Options();
 			Options["ProgramName"] = "UATerry";
 			Options["cwd"] = Directory.GetCurrentDirectory();
+			Options["P4PORT"] = Settings.Port ?? P4Port;
+			Options["P4USER"] = Settings.UserName ?? P4User;
+			Options["P4CLIENT"] = Settings.Workspace ?? P4Client;
 
 			Perforce.P4.Server Server = new(new Perforce.P4.ServerAddress(P4Port));
 			Perforce.P4.Repository Repo = new(Server);
@@ -31,6 +42,7 @@ namespace UATerry
 			try
 			{
 				Repo.Connection.Connect(Options);
+				Repo.Connection.Client = Repo.GetClient(Settings.Workspace);
 			}
 			catch (Exception e)
 			{
@@ -138,12 +150,5 @@ namespace UATerry
 
 			return 0;
 		}
-
-		// static async Task<int> SetupCommand()
-		// {
-		//     // check for expected executables on path
-
-		//     // set p4 ignore if not defined
-		// }
 	}
 }

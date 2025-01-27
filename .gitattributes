@@ -1,8 +1,12 @@
-# Auto detect text files and perform LF normalization
-*          	text=auto
+# Do not perform end-of-line normalization
+*           -text
 
-*.cs        text diff=csharp
+# Text/Markdown/ReStructuredText/etc. such as documentation
+*.txt       text
+*.md        text
+*.rst       text
 
+# Cpp
 *.c         text diff=cpp
 *.cc        text diff=cpp
 *.cxx       text diff=cpp
@@ -14,6 +18,14 @@
 *.h++       text diff=cpp
 *.hh        text diff=cpp
 
+# CSharp
+*.cs        text diff=csharp
+
+# Scripts
+*.bat       text eol=crlf
+*.sh        text eol=lf
+
+# Visual Studio project/solution files explicitly expect CRLF
 *.sln       text eol=crlf
-*.csproj    text eol=crlf
 *.vcxproj   text eol=crlf
+*.csproj    text eol=crlf

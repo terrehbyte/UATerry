@@ -27,6 +27,7 @@ namespace UATerry
 				string? ProviderName = ProviderSection.GetValue<string?>("Provider");
 				if(string.Compare(ProviderName, "Perforce", StringComparison.InvariantCultureIgnoreCase) != 0)
 				{
+					Console.WriteLine("Editor not configured to use Perforce.");
 					return Settings;
 				}
 			}
@@ -36,6 +37,10 @@ namespace UATerry
 			if (PerforceSection.Exists())
 			{
 				Settings = PerforceSection.Get<P4SourceControlSettings>();
+			}
+			else
+			{
+				Console.WriteLine("Perforce settings not configured.");
 			}
 
 			return Settings;

@@ -17,12 +17,18 @@ namespace UATerry
 		// 1. Unreal Engine Perforce Configuration (including UseP4Config)
 		// 2. P4CONFIG
 		// 3. Environment Variables
-		static Perforce.P4.Repository GetP4Repository()
+		static Perforce.P4.Repository? GetP4Repository()
 		{
 			// get environment variables
 			string P4Port = Environment.GetEnvironmentVariable("P4PORT") ?? string.Empty;
 			string P4User = Environment.GetEnvironmentVariable("P4USER") ?? string.Empty;
 			string P4Client = Environment.GetEnvironmentVariable("P4CLIENT") ?? string.Empty;
+
+			if(UProjectUri == null)
+			{
+				Console.WriteLine("Cannot resolve Perforce settings; .uproject path not found.");
+				return null;
+			}
 
 			// get ue settings
 			Uri UProjectFileDirectory = new Uri(Path.GetDirectoryName(UProjectUri.LocalPath) + Path.DirectorySeparatorChar);
@@ -31,23 +37,31 @@ namespace UATerry
 
 			Perforce.P4.Options Options = new Perforce.P4.Options();
 			Options["ProgramName"] = "UATerry";
-			Options["cwd"] = Directory.GetCurrentDirectory();
+			//Options["cwd"] = Directory.GetCurrentDirectory() + "\\";
 			Options["P4PORT"] = Settings.Port ?? P4Port;
 			Options["P4USER"] = Settings.UserName ?? P4User;
 			Options["P4CLIENT"] = Settings.Workspace ?? P4Client;
 
-			Perforce.P4.Server Server = new(new Perforce.P4.ServerAddress(P4Port));
-			Perforce.P4.Repository Repo = new(Server);
+			Perforce.P4.Server Server = new(new Perforce.P4.ServerAddress(Options["P4PORT"]));
+			Perforce.P4.Repository Repo = new(Server, false);
+
+			//Console.WriteLine("CWD: " + Options["cwd"]);
 
 			try
 			{
+				Console.WriteLine("Attempt to connect using the following settings:");
+				Console.WriteLine("\tP4PORT: " + Options["P4PORT"]);
+				Console.WriteLine("\tP4USER: " + Options["P4USER"]);
+				Console.WriteLine("\tP4CLIENT: " + Options["P4CLIENT"]);
 				Repo.Connection.Connect(Options);
+				Console.Write("Attempting to get client...");
 				Repo.Connection.Client = Repo.GetClient(Settings.Workspace);
+				Console.WriteLine(" OK.");
 			}
 			catch (Exception e)
 			{
 				Console.Error.WriteLine("Failed to connect to Perforce server.");
-				Console.Error.WriteLine("Error: " + e.Message);
+				Console.Error.WriteLine("Error: " + e.Message + e.StackTrace);
 			}
 
 			return Repo;
@@ -79,6 +93,7 @@ namespace UATerry
 			}
 
 			var PerforceOption = new Option<bool>("--perforce", "Use Perforce to checkout files before building");
+			PerforceOption.SetDefaultValue(false);
 
 			RootCommand RootCmd = new RootCommand("UATerry locates and runs the Unreal Engine Automation Tool (UAT) with preconfigured parameters for common tasks.");
 			RootCmd.AddGlobalOption(PerforceOption);
@@ -107,10 +122,14 @@ namespace UATerry
 
 			if (UsePerforce)
 			{
-				Perforce.P4.Repository PerforceRepo = GetP4Repository();
+				Perforce.P4.Repository? PerforceRepo = GetP4Repository();
 
+				if (PerforceRepo == null)
+				{
+					Console.WriteLine("Failed to get Perforce repository.");
+				}
 				// checkout if logged in
-				if (PerforceRepo.Connection.Status == Perforce.P4.ConnectionStatus.Connected)
+				else if (PerforceRepo.Connection.Status == Perforce.P4.ConnectionStatus.Connected)
 				{
 					Debug.Assert(UProjectDirUri != null);
 
@@ -141,6 +160,10 @@ namespace UATerry
 					{
 						return 2;
 					}
+				}
+				else
+				{
+					Console.WriteLine("Perforce not connected; skipping file checkout.");
 				}
 			}
 

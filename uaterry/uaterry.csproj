@@ -16,6 +16,8 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
+	<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+	<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>

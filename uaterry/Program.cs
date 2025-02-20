@@ -45,8 +45,6 @@ namespace UATerry
 			Perforce.P4.Server Server = new(new Perforce.P4.ServerAddress(Options["P4PORT"]));
 			Perforce.P4.Repository Repo = new(Server, false);
 
-			//Console.WriteLine("CWD: " + Options["cwd"]);
-
 			try
 			{
 				Console.WriteLine("Attempt to connect using the following settings:");
@@ -55,7 +53,7 @@ namespace UATerry
 				Console.WriteLine("\tP4CLIENT: " + Options["P4CLIENT"]);
 				Repo.Connection.Connect(Options);
 				Console.Write("Attempting to get client...");
-				Repo.Connection.Client = Repo.GetClient(Settings.Workspace);
+				Repo.Connection.Client = Repo.GetClient(Options["P4CLIENT"]);
 				Console.WriteLine(" OK.");
 			}
 			catch (Exception e)

@@ -21,7 +21,7 @@ REM Re-build project main module and its dependencies for development editor
 uaterry.exe build
 
 REM Re-build project main module and its dependencies for development editor AND stage on Perforce
-.\uaterry.exe build -perforce
+uaterry.exe build --perforce
 ```
 
 Batch files can contain the above logic and support double-click to execute,

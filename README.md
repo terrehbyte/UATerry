@@ -16,22 +16,31 @@ be accompanied by easy to launch batch scripts or other automation tooling.
 Download and place the binary ("**uaterry.exe**") in same directory as the
 Unreal Engine project's .uproject file. 
 
-```pwsh
-# Re-build project main module and its dependencies
-.\uaterry.exe build
+```bat
+REM Re-build project main module and its dependencies for development editor
+uaterry.exe build
 
-# Re-build project main module and its dependencies AND stage on Perforce
+REM Re-build project main module and its dependencies for development editor AND stage on Perforce
 .\uaterry.exe build -perforce
 ```
+
+Batch files can contain the above logic and support double-click to execute,
+allowing for a simple and accessible troubleshooting cmdlet that can be run
+when you suspect that binaries need to be refreshed for the development
+editor configuration.
+
+A simple batch script that does this is available in the **scripts/** folder.
+
+### uewhere
 
 The support logic for locating UAT is in **uewhere** which can also be
 distributed as its own standalone program. It looks for a **.uproject** in the
 same  directory and attempts to resolve the corresponding engine installation
 path.
 
-```pwsh
-# Locates the engine installation directory
-.\uewhere.exe
+```bat
+REM Locates the engine installation directory
+uewhere.exe
 ```
 
 The above snippet, if run on a .uproject configured to expect on 5.4, could

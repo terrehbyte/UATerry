@@ -26,6 +26,9 @@ end_of_line = crlf
 end_of_line = crlf
 [*.sh]
 end_of_line = lf
+[*.yaml]
+indent_style = space
+indent_size = 2
 
 [*.{c++,cc,cpp,cppm,cxx,h,h++,hh,hpp,hxx,inl,ipp,ixx,tlh,tli}]
 # Visual C++ Code Style settings

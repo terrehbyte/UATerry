@@ -5,7 +5,7 @@ name: .NET
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "feat-ghactions" ]
   pull_request:
     branches: [ "main" ]
 
@@ -24,3 +24,18 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore
+    - name: Publish
+      run: dotnet publish
+    - name: Prepare Artifact
+      shell: pwsh
+      run: |
+        Echo $env:GITHUB_WORKSPACE
+        New-Item $env:GITHUB_WORKSPACE\Packaging\ -Type Directory -ea 0
+        Copy-Item -Path $env:GITHUB_WORKSPACE\uewhere\bin\Release\net8.0-windows\win-x64\publish\uewhere.exe -Destination $env:GITHUB_WORKSPACE\Packaging\uewhere.exe
+        Copy-Item -Path $env:GITHUB_WORKSPACE\uaterry\bin\Release\net8.0-windows\win-x64\publish\uaterry.exe -Destination $env:GITHUB_WORKSPACE\Packaging\uaterry.exe
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: binaries
+        path: |
+          .\Packaging\

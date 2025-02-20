@@ -31,7 +31,7 @@ path.
 
 ```pwsh
 # Locates the engine installation directory
-.\uaterry.exe
+.\uewhere.exe
 ```
 
 The above snippet, if run on a .uproject configured to expect on 5.4, could

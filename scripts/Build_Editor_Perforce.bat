@@ -7,6 +7,6 @@ REM
 REM Move to the directory of this script (to allow launchging from P4V)
 cd %~dp0
 
-uaterry build
+uaterry build --perforce
 
 pause

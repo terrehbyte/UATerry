@@ -45,5 +45,5 @@ jobs:
       if: github.ref_type == 'tag'
       with:
         files: |
-          $env:GITHUB_WORKSPACE\Packaging\uewhere.exe
-          $env:GITHUB_WORKSPACE\Packaging\uaterry.exe
+          ${{ github.workspace }}\Packaging\uewhere.exe
+          ${{ github.workspace }}\Packaging\uaterry.exe

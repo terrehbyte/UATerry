@@ -26,7 +26,7 @@ end_of_line = crlf
 end_of_line = crlf
 [*.sh]
 end_of_line = lf
-[*.yaml]
+[*.yml]
 indent_style = space
 indent_size = 2
 
